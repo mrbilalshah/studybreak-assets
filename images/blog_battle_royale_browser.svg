@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#382456;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bg)" />
+  <!-- Decorative accent bar -->
+  <rect width="800" height="6" y="0" fill="#ef4444" />
+  <!-- Grid lines for texture -->
+  <line x1="0" y1="150" x2="800" y2="150" stroke="#ef4444" stroke-opacity="0.08" stroke-width="1"/>
+  <line x1="0" y1="300" x2="800" y2="300" stroke="#ef4444" stroke-opacity="0.08" stroke-width="1"/>
+  <line x1="200" y1="0" x2="200" y2="450" stroke="#ef4444" stroke-opacity="0.08" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="450" stroke="#ef4444" stroke-opacity="0.08" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="450" stroke="#ef4444" stroke-opacity="0.08" stroke-width="1"/>
+  <!-- Emoji -->
+  <text x="400" y="200" font-size="80" text-anchor="middle" dominant-baseline="middle">🎯</text>
+  <!-- Title -->
+  <text x="400" y="300" font-family="system-ui,sans-serif" font-size="28" font-weight="700"
+    fill="white" text-anchor="middle" dominant-baseline="middle"
+    letter-spacing="1">BATTLE ROYALE</text>
+  <text x="400" y="340" font-family="system-ui,sans-serif" font-size="28" font-weight="700"
+    fill="white" text-anchor="middle" dominant-baseline="middle"
+    letter-spacing="1">BROWSER GAMES</text>
+  <!-- Site name -->
+  <text x="400" y="410" font-family="system-ui,sans-serif" font-size="14" font-weight="500"
+    fill="#ef4444" text-anchor="middle" dominant-baseline="middle" letter-spacing="2">
+    CLASSROOM CONNECT
+  </text>
+</svg>
