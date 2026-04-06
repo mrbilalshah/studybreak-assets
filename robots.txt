@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /game/%5Bslug%5D
+Disallow: /games/%5Bcategory%5D
+Disallow: /blog/%5Bslug%5D
 
 Sitemap: https://www.classroom-connect.co.uk/sitemap.xml
