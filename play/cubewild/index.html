@@ -99,7 +99,7 @@
     padding: 1px 6px; white-space: nowrap; justify-self: end;
   }
   .cw-link {
-    display: inline-block; margin-top: 12px; background: none; border: 0; padding: 4px;
+    display: inline-block; margin-top: 10px; background: none; border: 0; padding: 4px;
     color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer;
   }
 
@@ -113,6 +113,16 @@
     transition: width 0.25s;
   }
   .cw-progress-detail { margin: 8px 0 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cw-progress.busy div {
+    background-size: 28px 100%;
+    animation: cw-crawl 0.9s linear infinite;
+  }
+  @keyframes cw-crawl { to { background-position: 28px 0; } }
+  @media (prefers-reduced-motion: reduce) { .cw-progress.busy div { animation: none; } }
+  .cw-tip { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px; color: var(--text); min-height: 2.9em; }
+  .cw-tip b { color: #9be564; }
+  .cw-subtitle { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+  .cw-links { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
 
   .cw-credits { text-align: left; font-size: 13px; line-height: 1.5; color: var(--muted); max-height: 60vh; overflow: auto; }
   .cw-credits h2 { color: var(--text); font-size: 18px; margin: 0 0 8px; text-align: center; }
@@ -147,14 +157,28 @@
       <kbd>1 - 9</kbd><span>Pick a hotbar slot</span>
       <kbd>Esc</kbd><span>Pause</span>
     </div>
-    <button class="cw-link" id="creditsBtn">Credits and licences</button>
+    <div class="cw-links">
+      <button class="cw-link" id="freshBtn">Start a new world</button>
+      <button class="cw-link" id="creditsBtn">Credits and licences</button>
+    </div>
   </section>
 
   <section class="cw-card" id="loadCard" hidden aria-live="polite">
     <h1 class="cw-wordmark" style="font-size:40px">Cube<span>wild</span></h1>
     <p class="cw-progress-label" id="loadLabel">Getting your world ready</p>
-    <div class="cw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="loadBarWrap"><div id="loadBar"></div></div>
+    <div class="cw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="loadLabel" id="loadBarWrap"><div id="loadBar"></div></div>
     <p class="cw-progress-detail" id="loadDetail">The first visit downloads about 40 MB. After that it starts much faster.</p>
+    <p class="cw-tip" id="loadTip"></p>
+  </section>
+
+  <section class="cw-card" id="freshCard" hidden aria-labelledby="freshTitle">
+    <h2 class="cw-subtitle" id="freshTitle">Start a new world?</h2>
+    <p class="cw-tagline">This replaces your saved world in that mode. It cannot be undone.</p>
+    <div class="cw-modes">
+      <button class="cw-btn survival" data-fresh="survival">New Survival<small>Replaces your Survival world</small></button>
+      <button class="cw-btn creative" data-fresh="creative">New Creative<small>Replaces your Creative world</small></button>
+    </div>
+    <button class="cw-link" id="freshBack">Back</button>
   </section>
 
   <section class="cw-card" id="msgCard" hidden aria-live="polite">
@@ -184,8 +208,20 @@
   // launcher treats the pack URL as its version: a new folder makes every
   // browser fetch the update, an unchanged one keeps using its saved copy.
   var GAME_DIR = "games/mineclonia-0.124.0";
-  var $ = function (id) { return document.getElementById(id); };
-  var scene = $("scene");
+  // One saved world per mode, in the browser's private storage.
+  var WORLDS = { survival: "Cubewild-Survival", creative: "Cubewild-Creative" };
+  var TIPS = [
+    "Punch a tree to collect <b>wood</b>, then press <b>E</b> to turn it into planks.",
+    "Four planks make a <b>crafting table</b>. Place it to craft tools.",
+    "Build a shelter before your first night. Monsters come out in the dark.",
+    "Coal and a stick make <b>torches</b>, which keep monsters away.",
+    "Hold <b>R</b> to sprint and <b>Shift</b> to sneak along edges.",
+    "In Creative, double-tap <b>Space</b> to fly.",
+    "Press <b>Esc</b> to pause. Your world saves when you exit."
+  ];
+  var scene = document.getElementById("scene");
+  // Works while the launcher has the scene detached from the page, too.
+  var $ = function (id) { return document.getElementById(id) || scene.querySelector("#" + id); };
 
   // The engine renames the tab to its own version string; keep ours.
   function keepTitle() { if (document.title !== "Cubewild") document.title = "Cubewild"; }
@@ -199,7 +235,7 @@
   cover.src = "cover.webp";
 
   function show(card) {
-    ["startCard", "loadCard", "msgCard", "creditsCard"].forEach(function (id) {
+    ["startCard", "loadCard", "msgCard", "creditsCard", "freshCard"].forEach(function (id) {
       $(id).hidden = (id !== card);
     });
   }
@@ -233,6 +269,7 @@
   }
 
   var s = support();
+  var canRun = false;
   var selfUrl = location.href.split("#")[0];
   if (!s.jspi) {
     message("Cubewild needs an up-to-date Chrome or Edge on a computer or Chromebook. It does not run in Safari, Firefox or on iPad yet.");
@@ -244,19 +281,71 @@
     } else {
       message("Cubewild could not start in this browser. Try updating Chrome, then reload the page.", "Reload", selfUrl, false);
     }
-  } else if (window.matchMedia && !window.matchMedia("(any-pointer: fine)").matches) {
-    $("startNote").textContent = "Cubewild is built for a keyboard and mouse. Touch screens are not supported yet.";
+  } else {
+    canRun = true;
+    if (window.matchMedia && !window.matchMedia("(any-pointer: fine)").matches) {
+      $("startNote").textContent = "Cubewild is built for a keyboard and mouse. Touch screens are not supported yet.";
+    }
   }
 
   $("creditsBtn").addEventListener("click", function () { show("creditsCard"); });
   $("creditsClose").addEventListener("click", function () { show("startCard"); });
+  $("freshBtn").addEventListener("click", function () { show("freshCard"); });
+  $("freshBack").addEventListener("click", function () { show("startCard"); });
 
-  // Progress, shown as one bar: downloads first, then unpacking. The launcher
-  // replaces the page when the game starts, so the loading card is put back on
-  // top until the game files are unpacked and the game draws its own screen.
+  // ---- Timeline: how long each stage takes (window.__cwTimes, in ms) ----
+  var times = {};
+  window.__cwTimes = times;
+  function mark(name) {
+    if (name in times) return;
+    times[name] = Math.round(performance.now());
+    try { console.info("[Cubewild] " + name + " at " + (times[name] / 1000).toFixed(1) + "s"); } catch (e) {}
+  }
+
+  // ---- Loading card -------------------------------------------------------
+  // Stages and where each one sits on the bar. Downloads and unpacking report
+  // real progress; the later stages have none, so the bar creeps towards the
+  // end of the stage while the stripes move.
+  var STAGES = {
+    download: { label: "Downloading Cubewild", from: 0, to: 35 },
+    unpack: { label: "Unpacking the game files", from: 35, to: 45 },
+    start: { label: "Starting your world", from: 45, to: 78 },
+    media: { label: "Loading blocks and sounds", from: 78, to: 92 },
+    land: { label: "Building the land around you", from: 92, to: 99 }
+  };
+  var stage = null, stageAt = 0, barPct = 0, tipIndex = 0;
+  function setBar(pct) {
+    barPct = Math.max(barPct, Math.min(100, pct));
+    var bar = $("loadBar"), wrap = $("loadBarWrap");
+    if (bar) bar.style.width = barPct.toFixed(1) + "%";
+    if (wrap) wrap.setAttribute("aria-valuenow", String(Math.round(barPct)));
+  }
+  function setStage(name) {
+    if (stage === name) return;
+    stage = name;
+    stageAt = performance.now();
+    mark("stage:" + name);
+    var st = STAGES[name];
+    $("loadLabel").textContent = st.label;
+    $("loadBarWrap").classList.toggle("busy", name !== "download" && name !== "unpack");
+    setBar(st.from);
+  }
+  function showTip() {
+    $("loadTip").innerHTML = TIPS[tipIndex % TIPS.length];
+    tipIndex++;
+  }
+  setInterval(function () {
+    if (!stage || STAGES[stage].from === undefined) return;
+    if (stage === "start" || stage === "media" || stage === "land") {
+      var st = STAGES[stage];
+      var k = 1 - Math.exp(-(performance.now() - stageAt) / 9000);
+      setBar(st.from + (st.to - st.from) * k);
+    }
+  }, 250);
+  setInterval(function () { if (overlayWanted && !$("loadCard").hidden) showTip(); }, 6000);
+
+  // Progress from the launcher: downloads first, then unpacking.
   var tasks = {};
-  var launched = false;
-  var overlayDone = false;
   function average(prefix) {
     var names = Object.keys(tasks).filter(function (n) { return n.indexOf(prefix) === 0; });
     if (!names.length) return null;
@@ -267,58 +356,100 @@
   function onProgress(name, fraction) {
     try {
       tasks[name] = fraction;
-      var dl = average("download:");
+      if (name === "download:" + GAME && fraction === 1) mark("downloaded:" + GAME);
+      if (name === "install:" + GAME && fraction === 1) mark("installed:" + GAME);
+      if (!overlayWanted || stage === "media" || stage === "land") return;
       var inst = average("install:");
-      var downloading = dl === null || dl < 1;
-      var pct = downloading ? Math.round((dl || 0) * 85) : Math.round(85 + (inst || 0) * 15);
-      var bar = $("loadBar"), wrap = $("loadBarWrap"), label = $("loadLabel");
-      if (bar) bar.style.width = pct + "%";
-      if (wrap) wrap.setAttribute("aria-valuenow", String(pct));
-      if (label) label.textContent = downloading ? "Downloading Cubewild" : "Unpacking the game files";
-      if (launched && !overlayDone) {
-        var gameDone = tasks["install:" + GAME] === 1 && tasks["install:base"] === 1;
-        if (gameDone) {
-          overlayDone = true;
-          setTimeout(function () { if (scene.parentNode) scene.parentNode.removeChild(scene); }, 400);
-        } else if (!document.body.contains(scene) && !document.getElementById("luanti_busy_retry")) {
-          scene.classList.add("cw-over");
-          document.body.appendChild(scene);
+      if (stage === "start" || stage === "unpack") {
+        // After launch the packs are unpacked first, then the world starts.
+        if (launched && inst !== null && inst < 1) {
+          setStage("unpack");
+          setBar(STAGES.unpack.from + (STAGES.unpack.to - STAGES.unpack.from) * inst);
+        } else if (launched && inst === 1) {
+          setStage("start");
         }
+        if (stage === "start") return;
+      }
+      var dl = average("download:");
+      if (dl !== null && dl < 1) {
+        setStage("download");
+        setBar(STAGES.download.to * dl);
+      } else {
+        setStage("unpack");
+        setBar(STAGES.unpack.from + (STAGES.unpack.to - STAGES.unpack.from) * (inst || 0));
       }
     } catch (e) {
       // Never let the progress display break the launcher.
     }
   }
 
-  var started = false;
-  function start(mode) {
-    if (started) return;
-    started = true;
-    show("loadCard");
+  // The launcher replaces the whole page when the game starts. Keep the
+  // loading card on top of it until the player is actually in the world.
+  var overlayWanted = false;
+  setInterval(function () {
+    if (!overlayWanted) return;
+    if (!document.body.contains(scene) && !document.getElementById("luanti_busy_retry")) {
+      scene.classList.add("cw-over");
+      document.body.appendChild(scene);
+    }
+  }, 150);
+  function revealGame() {
+    if (!overlayWanted) return;
+    overlayWanted = false;
+    mark("revealed");
+    if (scene.parentNode) scene.parentNode.removeChild(scene);
+  }
 
+  // Lines the engine prints tell us where it has got to.
+  function onPrint(text) {
+    var t = String(text || "");
+    if (t.indexOf("Server for gameid") !== -1) {
+      mark("serverReady");
+      setStage("media");
+    } else if (t.indexOf("joins game") !== -1) {
+      mark("joined");
+      setStage("land");
+      setBar(STAGES.land.from);
+      // Give the first chunks of land a moment to appear, then let them in.
+      setTimeout(revealGame, 2500);
+    }
+  }
+
+  // ---- Engine -------------------------------------------------------------
+  // The engine and game files start downloading as soon as the player shows
+  // an interest (moves the mouse over the game, presses a key or touches it),
+  // so most of the waiting happens while they read the start screen.
+  var mtl = null, ready = false, wanted = null, launched = false;
+  function warm() {
+    if (mtl || !canRun) return;
+    mark("warm");
     var script = document.createElement("script");
     script.src = RELEASE + "/launcher.js";
-    script.onerror = function () { message("Cubewild could not load. Check your connection, then reload.", "Reload", selfUrl, false); };
+    script.onerror = function () {
+      if (wanted) message("Cubewild could not load. Check your connection, then reload.", "Reload", selfUrl, false);
+    };
     script.onload = function () {
-      var mtl;
       try {
         mtl = new LuantiLauncher();
       } catch (e) {
         message("Cubewild could not start: " + e.message);
         return;
       }
+      mark("launcherLoaded");
       mtl.onprogress = onProgress;
+      mtl.onprint = onPrint;
       mtl.onerror = function (err) {
         var text = String(err || "");
+        overlayWanted = false;
         var friendly = /memory|RangeError|allocat/i.test(text)
           ? "This device ran out of memory starting Cubewild. Close other tabs and try again."
           : "Something went wrong starting Cubewild. Reload to try again.";
-        // The launcher may already have replaced the page, so draw over it.
         if (!document.body.contains(scene)) document.body.appendChild(scene);
         message(friendly, "Reload", selfUrl, false);
         console.error("Cubewild:", text);
       };
       mtl.onexit = function () {
+        overlayWanted = false;
         document.body.innerHTML = "";
         document.body.appendChild(scene);
         message("Your world is saved. See you next time.", "Play again", selfUrl, false);
@@ -329,54 +460,100 @@
       // site (where it simply fails) so the game never contacts a third party.
       mtl.setProxy((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/play/cubewild/no-proxy");
 
-      var lang = "en";
-      try { lang = getDefaultLanguage(); } catch (e) {}
-      mtl.setLang(lang);
-
-      // Lighter settings so it runs on school Chromebooks.
-      mtl.setConf("viewing_range", 80);
-      mtl.setConf("max_block_send_distance", 5);
-      mtl.setConf("max_block_generate_distance", 5);
-      mtl.setConf("fps_max", 60);
-      mtl.overrideConf("default_game", GAME);
-      mtl.overrideConf("menu_last_game", GAME);
-      mtl.overrideConf("creative_mode", mode === "creative" ? "true" : "false");
-      mtl.overrideConf("enable_damage", mode === "creative" ? "false" : "true");
-      mtl.overrideConf("doubletap_jump", mode === "creative" ? "true" : "false");
-      // Mineclonia's newer structure generator runs in Lua and makes new
-      // worlds take minutes to appear in the browser. The classic one is
-      // much faster. Only affects worlds when they are first created.
-      mtl.overrideConf("mcl_levelgen_enable_ersatz", "false");
-
-      // Tuning knobs for testing, e.g. ?gen=3&emerge=2&range=60 (not linked anywhere).
-      var q = new URLSearchParams(location.search);
-      if (/^[1-9]$/.test(q.get("gen") || "")) mtl.overrideConf("max_block_generate_distance", q.get("gen"));
-      if (/^[1-8]$/.test(q.get("emerge") || "")) mtl.overrideConf("num_emerge_threads", q.get("emerge"));
-      if (q.get("ersatz") === "1") mtl.overrideConf("mcl_levelgen_enable_ersatz", "true");
-      if (/^[0-9]{2,3}$/.test(q.get("range") || "")) mtl.overrideConf("viewing_range", q.get("range"));
-      // Keys closer to what players expect: E for inventory, hold R to
-      // sprint. Ctrl is avoided because Ctrl+W closes the browser tab.
-      mtl.setConf("keymap_inventory", "SYSTEM_SCANCODE_8");
-      mtl.setConf("keymap_aux1", "SYSTEM_SCANCODE_21");
-
-      // Start fetching the game files now, alongside the engine.
+      // Fetch and unpack the game files now, alongside the engine.
       mtl.setPacksDir(GAME_DIR, false);
       mtl.addPack(GAME).catch(function () {});
 
       mtl.onready = function () {
-        var args = new LuantiArgs();
-        args.gameid = GAME;
-        args.world = "/luanti/worlds/cubewild_" + mode;
-        args.go = true;
-        launched = true;
-        mtl.launch(args);
+        mark("engineReady");
+        ready = true;
+        if (wanted) go();
       };
     };
-    document.body.appendChild(script);
+    document.head.appendChild(script);
+  }
+  ["pointermove", "pointerdown", "keydown", "touchstart", "focusin"].forEach(function (ev) {
+    window.addEventListener(ev, warm, { once: true, passive: true });
+  });
+
+  function configure(mode) {
+    var lang = "en";
+    try { lang = getDefaultLanguage(); } catch (e) {}
+    mtl.setLang(lang);
+
+    // Lighter settings so it runs on school Chromebooks.
+    mtl.setConf("viewing_range", 80);
+    mtl.setConf("max_block_send_distance", 5);
+    mtl.setConf("max_block_generate_distance", 5);
+    mtl.setConf("fps_max", 60);
+    mtl.overrideConf("default_game", GAME);
+    mtl.overrideConf("menu_last_game", GAME);
+    mtl.overrideConf("creative_mode", mode === "creative" ? "true" : "false");
+    mtl.overrideConf("enable_damage", mode === "creative" ? "false" : "true");
+    mtl.overrideConf("doubletap_jump", mode === "creative" ? "true" : "false");
+    // Mineclonia's newer structure generator runs in Lua and makes new worlds
+    // take minutes to appear in the browser. The classic one is much faster.
+    // Only affects worlds when they are first created.
+    mtl.overrideConf("mcl_levelgen_enable_ersatz", "false");
+    // Keys closer to what players expect: E for inventory, hold R to sprint.
+    // Ctrl is avoided because Ctrl+W closes the browser tab.
+    mtl.setConf("keymap_inventory", "SYSTEM_SCANCODE_8");
+    mtl.setConf("keymap_aux1", "SYSTEM_SCANCODE_21");
+
+    // Tuning knobs for testing, e.g. ?gen=3&emerge=2&range=60 (not linked anywhere).
+    var q = new URLSearchParams(location.search);
+    if (/^[1-9]$/.test(q.get("gen") || "")) mtl.overrideConf("max_block_generate_distance", q.get("gen"));
+    if (/^[1-8]$/.test(q.get("emerge") || "")) mtl.overrideConf("num_emerge_threads", q.get("emerge"));
+    if (q.get("ersatz") === "1") mtl.overrideConf("mcl_levelgen_enable_ersatz", "true");
+    if (/^[0-9]{2,3}$/.test(q.get("range") || "")) mtl.overrideConf("viewing_range", q.get("range"));
+  }
+
+  function go() {
+    if (launched || !wanted) return;
+    launched = true;
+    var mode = wanted.mode, dir = WORLDS[mode];
+    var prepare = Promise.resolve();
+    if (wanted.fresh) {
+      prepare = mtl.worldExists(dir).then(function (exists) {
+        return exists ? mtl.deleteWorld(dir) : null;
+      });
+    }
+    prepare.catch(function (e) {
+      console.warn("Cubewild: could not reset the world", e);
+    }).then(function () {
+      configure(mode);
+      var args = new LuantiArgs();
+      args.gameid = GAME;
+      args.world = "/luanti/worlds/" + dir;
+      args.go = true;
+      mark("launch");
+      var inst = average("install:");
+      setStage(inst !== null && inst < 1 ? "unpack" : "start");
+      // If the engine never reports the player joining, stop covering it
+      // after five minutes so any message it shows can be seen.
+      setTimeout(revealGame, 300000);
+      mtl.launch(args);
+    });
+  }
+
+  function start(mode, fresh) {
+    if (wanted || !canRun) return;
+    wanted = { mode: mode, fresh: !!fresh };
+    mark("click");
+    overlayWanted = true;
+    show("loadCard");
+    showTip();
+    setStage("download");
+    warm();
+    if (ready) go();
+    else onProgress("poll", 0);
   }
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-mode]"), function (btn) {
-    btn.addEventListener("click", function () { start(btn.getAttribute("data-mode")); });
+    btn.addEventListener("click", function () { start(btn.getAttribute("data-mode"), false); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-fresh]"), function (btn) {
+    btn.addEventListener("click", function () { start(btn.getAttribute("data-fresh"), true); });
   });
 })();
 </script>
