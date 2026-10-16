@@ -187,6 +187,12 @@
   var $ = function (id) { return document.getElementById(id); };
   var scene = $("scene");
 
+  // The engine renames the tab to its own version string; keep ours.
+  function keepTitle() { if (document.title !== "Cubewild") document.title = "Cubewild"; }
+  try {
+    new MutationObserver(keepTitle).observe(document.head, { childList: true, subtree: true, characterData: true });
+  } catch (e) {}
+
   // Swap the drawn ground for a real screenshot once it has loaded.
   var cover = new Image();
   cover.onload = function () { scene.classList.add("has-cover"); };
@@ -342,11 +348,12 @@
       // much faster. Only affects worlds when they are first created.
       mtl.overrideConf("mcl_levelgen_enable_ersatz", "false");
 
-      // Tuning knobs for testing, e.g. ?gen=3&emerge=2 (not linked anywhere).
+      // Tuning knobs for testing, e.g. ?gen=3&emerge=2&range=60 (not linked anywhere).
       var q = new URLSearchParams(location.search);
       if (/^[1-9]$/.test(q.get("gen") || "")) mtl.overrideConf("max_block_generate_distance", q.get("gen"));
       if (/^[1-8]$/.test(q.get("emerge") || "")) mtl.overrideConf("num_emerge_threads", q.get("emerge"));
       if (q.get("ersatz") === "1") mtl.overrideConf("mcl_levelgen_enable_ersatz", "true");
+      if (/^[0-9]{2,3}$/.test(q.get("range") || "")) mtl.overrideConf("viewing_range", q.get("range"));
       // Keys closer to what players expect: E for inventory, hold R to
       // sprint. Ctrl is avoided because Ctrl+W closes the browser tab.
       mtl.setConf("keymap_inventory", "SYSTEM_SCANCODE_8");
