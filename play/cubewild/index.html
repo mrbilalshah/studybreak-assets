@@ -419,9 +419,12 @@
   // The engine and game files start downloading as soon as the player shows
   // an interest (moves the mouse over the game, presses a key or touches it),
   // so most of the waiting happens while they read the start screen.
-  var mtl = null, ready = false, wanted = null, launched = false;
+  var mtl = null, ready = false, wanted = null, launched = false, warming = false;
   function warm() {
-    if (mtl || !canRun) return;
+    // Only ever load the launcher once: a click can arrive while the first
+    // load (started by moving the mouse) is still in flight.
+    if (warming || !canRun) return;
+    warming = true;
     mark("warm");
     var script = document.createElement("script");
     script.src = RELEASE + "/launcher.js";
