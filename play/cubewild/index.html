@@ -337,6 +337,16 @@
       mtl.overrideConf("creative_mode", mode === "creative" ? "true" : "false");
       mtl.overrideConf("enable_damage", mode === "creative" ? "false" : "true");
       mtl.overrideConf("doubletap_jump", mode === "creative" ? "true" : "false");
+      // Mineclonia's newer structure generator runs in Lua and makes new
+      // worlds take minutes to appear in the browser. The classic one is
+      // much faster. Only affects worlds when they are first created.
+      mtl.overrideConf("mcl_levelgen_enable_ersatz", "false");
+
+      // Tuning knobs for testing, e.g. ?gen=3&emerge=2 (not linked anywhere).
+      var q = new URLSearchParams(location.search);
+      if (/^[1-9]$/.test(q.get("gen") || "")) mtl.overrideConf("max_block_generate_distance", q.get("gen"));
+      if (/^[1-8]$/.test(q.get("emerge") || "")) mtl.overrideConf("num_emerge_threads", q.get("emerge"));
+      if (q.get("ersatz") === "1") mtl.overrideConf("mcl_levelgen_enable_ersatz", "true");
       // Keys closer to what players expect: E for inventory, hold R to
       // sprint. Ctrl is avoided because Ctrl+W closes the browser tab.
       mtl.setConf("keymap_inventory", "SYSTEM_SCANCODE_8");
