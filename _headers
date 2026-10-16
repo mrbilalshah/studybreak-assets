@@ -1,0 +1,9 @@
+# Cubewild runs a multi-threaded WebAssembly engine, which browsers only allow
+# on cross-origin isolated pages. COOP + COEP isolate it when opened as its own
+# tab; Document-Isolation-Policy (Chrome/Edge 137+) isolates it inside the
+# game page iframe without isolating the game page itself.
+/play/cubewild/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+  Document-Isolation-Policy: isolate-and-require-corp

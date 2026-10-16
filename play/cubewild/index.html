@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cubewild</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --sky-top: #5fb4ea;
+    --sky-low: #b9e2fb;
+    --grass: #5aa53a;
+    --grass-dark: #3e7a26;
+    --dirt: #8a5a35;
+    --dirt-dark: #6b4327;
+    --panel: rgba(18, 22, 16, 0.88);
+    --panel-edge: #0b0d09;
+    --text: #f4f7ef;
+    --muted: #b9c4ad;
+    --stone: #7d8590;
+    --stone-dark: #555c66;
+    --sun: #ffd84a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--sky-low);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Start, loading and message screens. Removed when the game starts. */
+  .cw-scene {
+    position: fixed; inset: 0; overflow: hidden;
+    display: grid; place-items: center; padding: 16px;
+    background:
+      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-low) 62%, transparent 62%),
+      url("cover.webp") center 40% / cover no-repeat,
+      var(--sky-low);
+  }
+  .cw-scene.cw-over { z-index: 40; }
+  .cw-scene.has-cover {
+    background: url("cover.webp") center / cover no-repeat, var(--sky-low);
+  }
+  .cw-scene.has-cover::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10, 20, 30, 0.15), rgba(10, 14, 8, 0.55));
+  }
+  /* Blocky ground strip, shown until the cover image loads */
+  .cw-ground {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
+    background:
+      linear-gradient(180deg, var(--grass) 0 18px, var(--grass-dark) 18px 24px, transparent 24px),
+      repeating-linear-gradient(90deg, var(--dirt) 0 48px, var(--dirt-dark) 48px 52px),
+      var(--dirt);
+  }
+  .cw-scene.has-cover .cw-ground { display: none; }
+
+  .cw-card {
+    position: relative; width: min(420px, 100%);
+    background: var(--panel);
+    border: 3px solid var(--panel-edge);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.07), 0 18px 50px rgba(0, 0, 0, 0.35);
+    padding: 22px 22px 18px; text-align: center;
+  }
+  .cw-card[hidden] { display: none; }
+
+  .cw-wordmark {
+    margin: 0; font-size: clamp(40px, 11vw, 56px); line-height: 1; font-weight: 900;
+    letter-spacing: 0.04em; text-transform: uppercase; color: #ffffff;
+    text-shadow: 0 4px 0 var(--grass-dark), 0 8px 0 rgba(0, 0, 0, 0.35);
+  }
+  .cw-wordmark span { color: #9be564; }
+  .cw-tagline { margin: 12px 0 16px; color: var(--muted); font-size: 15px; line-height: 1.4; }
+
+  .cw-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cw-btn {
+    display: block; width: 100%; border: 3px solid var(--panel-edge); cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 17px; color: #fff; padding: 12px 10px 13px;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.28), inset 0 3px 0 rgba(255, 255, 255, 0.22);
+    text-decoration: none;
+  }
+  .cw-btn small { display: block; font-size: 12px; font-weight: 600; opacity: 0.88; margin-top: 3px; text-shadow: none; }
+  .cw-btn:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28), inset 0 3px 0 rgba(255, 255, 255, 0.22); }
+  .cw-btn:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+  .cw-btn.survival { background: var(--grass); }
+  .cw-btn.creative { background: #3f8fd2; }
+  .cw-btn.plain { background: var(--stone); }
+
+  .cw-note { margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .cw-keys {
+    margin: 14px 0 0; padding: 10px 8px; background: rgba(255, 255, 255, 0.06);
+    display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; text-align: left; font-size: 13px; color: var(--muted);
+  }
+  .cw-keys kbd {
+    font: inherit; font-weight: 800; color: var(--text); background: rgba(255, 255, 255, 0.12);
+    padding: 1px 6px; white-space: nowrap; justify-self: end;
+  }
+  .cw-link {
+    display: inline-block; margin-top: 12px; background: none; border: 0; padding: 4px;
+    color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer;
+  }
+
+  .cw-progress-label { margin: 18px 0 8px; font-weight: 700; }
+  .cw-progress {
+    height: 22px; border: 3px solid var(--panel-edge); background: #2b2f27;
+    box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35);
+  }
+  .cw-progress div {
+    height: 100%; width: 0%; background: repeating-linear-gradient(90deg, var(--grass) 0 14px, #6cbf47 14px 28px);
+    transition: width 0.25s;
+  }
+  .cw-progress-detail { margin: 8px 0 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .cw-credits { text-align: left; font-size: 13px; line-height: 1.5; color: var(--muted); max-height: 60vh; overflow: auto; }
+  .cw-credits h2 { color: var(--text); font-size: 18px; margin: 0 0 8px; text-align: center; }
+  .cw-credits p { margin: 0 0 10px; }
+  .cw-credits a { color: #bfe6ff; }
+
+  /* In-game: the launcher draws its own page. Hide its developer menu (console,
+     network address) and its header bar: the loading card covers downloads. */
+  body #settings_panel { display: none !important; }
+  body #header { display: none !important; }
+</style>
+</head>
+<body>
+<main class="cw-scene" id="scene">
+  <div class="cw-ground" aria-hidden="true"></div>
+
+  <section class="cw-card" id="startCard" aria-labelledby="cwTitle">
+    <h1 class="cw-wordmark" id="cwTitle">Cube<span>wild</span></h1>
+    <p class="cw-tagline">Explore, build and survive in a world made of blocks.</p>
+    <div class="cw-modes">
+      <button class="cw-btn survival" data-mode="survival">Survival<small>Gather, craft, survive</small></button>
+      <button class="cw-btn creative" data-mode="creative">Creative<small>Unlimited blocks, fly</small></button>
+    </div>
+    <p class="cw-note" id="startNote">Each mode keeps its own world, saved in this browser.</p>
+    <div class="cw-keys" aria-label="Controls">
+      <kbd>W A S D</kbd><span>Move (hold R to sprint, Shift to sneak)</span>
+      <kbd>Space</kbd><span>Jump (double-tap to fly in Creative)</span>
+      <kbd>Mouse</kbd><span>Look around</span>
+      <kbd>Left click</kbd><span>Dig or attack</span>
+      <kbd>Right click</kbd><span>Place or use</span>
+      <kbd>E</kbd><span>Inventory and crafting</span>
+      <kbd>1 - 9</kbd><span>Pick a hotbar slot</span>
+      <kbd>Esc</kbd><span>Pause</span>
+    </div>
+    <button class="cw-link" id="creditsBtn">Credits and licences</button>
+  </section>
+
+  <section class="cw-card" id="loadCard" hidden aria-live="polite">
+    <h1 class="cw-wordmark" style="font-size:40px">Cube<span>wild</span></h1>
+    <p class="cw-progress-label" id="loadLabel">Getting your world ready</p>
+    <div class="cw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="loadBarWrap"><div id="loadBar"></div></div>
+    <p class="cw-progress-detail" id="loadDetail">The first visit downloads about 40 MB. After that it starts much faster.</p>
+  </section>
+
+  <section class="cw-card" id="msgCard" hidden aria-live="polite">
+    <h1 class="cw-wordmark" style="font-size:40px">Cube<span>wild</span></h1>
+    <p class="cw-tagline" id="msgText"></p>
+    <a class="cw-btn plain" id="msgAction" href="#" hidden></a>
+  </section>
+
+  <section class="cw-card" id="creditsCard" hidden aria-labelledby="creditsTitle">
+    <div class="cw-credits">
+      <h2 id="creditsTitle">Credits and licences</h2>
+      <p>Cubewild is Classroom Connect's browser edition of <a href="https://codeberg.org/mineclonia/mineclonia" target="_blank" rel="noopener">Mineclonia</a> 0.124.0, running on the <a href="https://www.luanti.org/" target="_blank" rel="noopener">Luanti</a> engine. Thank you to everyone who builds them.</p>
+      <p><b>Mineclonia</b>: code under the GNU GPL v3 or later. Textures based on Pixel Perfection by XSSheep and Pixel Perfection Legacy by Nova Wostra (CC BY-SA 4.0); other media mostly CC BY-SA 3.0. Full author credits are in the game's CREDITS.md and LEGAL.md. Source: <a href="https://codeberg.org/mineclonia/mineclonia/src/tag/0.124.0" target="_blank" rel="noopener">codeberg.org/mineclonia/mineclonia</a>.</p>
+      <p><b>Luanti engine</b>: GNU LGPL v2.1 or later. Web version by paradust7 (<a href="https://github.com/paradust7/luanti-wasm" target="_blank" rel="noopener">luanti-wasm</a>, MIT). Engine source: <a href="https://github.com/paradust7/luanti/tree/81aacca2dcf12e622a49146844edf4510f389c35" target="_blank" rel="noopener">github.com/paradust7/luanti</a>. Also uses OpenSSL, curl, libarchive, libzip and zstd under their own licences. Licence texts: <a href="licenses/" target="_blank" rel="noopener">licenses</a>.</p>
+      <p>Cubewild is a fan-made game. It is not affiliated with, or endorsed by, Mojang or Microsoft.</p>
+    </div>
+    <button class="cw-btn plain" id="creditsClose" style="margin-top:6px">Back</button>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var GAME = "mineclonia";
+  var RELEASE = "631c5b8acb9e";
+  // Game packs live in a folder named after their version, because the
+  // launcher treats the pack URL as its version: a new folder makes every
+  // browser fetch the update, an unchanged one keeps using its saved copy.
+  var GAME_DIR = "games/mineclonia-0.124.0";
+  var $ = function (id) { return document.getElementById(id); };
+  var scene = $("scene");
+
+  // Swap the drawn ground for a real screenshot once it has loaded.
+  var cover = new Image();
+  cover.onload = function () { scene.classList.add("has-cover"); };
+  cover.src = "cover.webp";
+
+  function show(card) {
+    ["startCard", "loadCard", "msgCard", "creditsCard"].forEach(function (id) {
+      $(id).hidden = (id !== card);
+    });
+  }
+
+  function message(text, actionLabel, actionHref, newTab) {
+    $("msgText").textContent = text;
+    var a = $("msgAction");
+    if (actionLabel) {
+      a.hidden = false;
+      a.textContent = actionLabel;
+      a.href = actionHref;
+      if (newTab) { a.target = "_blank"; a.rel = "noopener"; } else { a.removeAttribute("target"); }
+    } else {
+      a.hidden = true;
+    }
+    show("msgCard");
+  }
+
+  // What this browser can do. Cubewild needs WebGL 2, threads (which need a
+  // cross-origin isolated page) and JavaScript Promise Integration (Chrome and
+  // Edge 137+).
+  function support() {
+    var gl2 = false;
+    try { gl2 = !!document.createElement("canvas").getContext("webgl2"); } catch (e) {}
+    return {
+      jspi: typeof WebAssembly === "object" && typeof WebAssembly.Suspending === "function",
+      isolated: window.crossOriginIsolated === true && typeof SharedArrayBuffer !== "undefined",
+      gl2: gl2,
+      framed: window.top !== window.self
+    };
+  }
+
+  var s = support();
+  var selfUrl = location.href.split("#")[0];
+  if (!s.jspi) {
+    message("Cubewild needs an up-to-date Chrome or Edge on a computer or Chromebook. It does not run in Safari, Firefox or on iPad yet.");
+  } else if (!s.gl2) {
+    message("Cubewild needs WebGL 2 graphics, which this browser has turned off. Try turning on hardware acceleration in Chrome settings.");
+  } else if (!s.isolated) {
+    if (s.framed) {
+      message("Your browser will not run Cubewild inside this page. Open it in its own tab instead.", "Open Cubewild in a new tab", selfUrl, true);
+    } else {
+      message("Cubewild could not start in this browser. Try updating Chrome, then reload the page.", "Reload", selfUrl, false);
+    }
+  } else if (window.matchMedia && !window.matchMedia("(any-pointer: fine)").matches) {
+    $("startNote").textContent = "Cubewild is built for a keyboard and mouse. Touch screens are not supported yet.";
+  }
+
+  $("creditsBtn").addEventListener("click", function () { show("creditsCard"); });
+  $("creditsClose").addEventListener("click", function () { show("startCard"); });
+
+  // Progress, shown as one bar: downloads first, then unpacking. The launcher
+  // replaces the page when the game starts, so the loading card is put back on
+  // top until the game files are unpacked and the game draws its own screen.
+  var tasks = {};
+  var launched = false;
+  var overlayDone = false;
+  function average(prefix) {
+    var names = Object.keys(tasks).filter(function (n) { return n.indexOf(prefix) === 0; });
+    if (!names.length) return null;
+    var total = 0;
+    names.forEach(function (n) { total += tasks[n]; });
+    return total / names.length;
+  }
+  function onProgress(name, fraction) {
+    try {
+      tasks[name] = fraction;
+      var dl = average("download:");
+      var inst = average("install:");
+      var downloading = dl === null || dl < 1;
+      var pct = downloading ? Math.round((dl || 0) * 85) : Math.round(85 + (inst || 0) * 15);
+      var bar = $("loadBar"), wrap = $("loadBarWrap"), label = $("loadLabel");
+      if (bar) bar.style.width = pct + "%";
+      if (wrap) wrap.setAttribute("aria-valuenow", String(pct));
+      if (label) label.textContent = downloading ? "Downloading Cubewild" : "Unpacking the game files";
+      if (launched && !overlayDone) {
+        var gameDone = tasks["install:" + GAME] === 1 && tasks["install:base"] === 1;
+        if (gameDone) {
+          overlayDone = true;
+          setTimeout(function () { if (scene.parentNode) scene.parentNode.removeChild(scene); }, 400);
+        } else if (!document.body.contains(scene) && !document.getElementById("luanti_busy_retry")) {
+          scene.classList.add("cw-over");
+          document.body.appendChild(scene);
+        }
+      }
+    } catch (e) {
+      // Never let the progress display break the launcher.
+    }
+  }
+
+  var started = false;
+  function start(mode) {
+    if (started) return;
+    started = true;
+    show("loadCard");
+
+    var script = document.createElement("script");
+    script.src = RELEASE + "/launcher.js";
+    script.onerror = function () { message("Cubewild could not load. Check your connection, then reload.", "Reload", selfUrl, false); };
+    script.onload = function () {
+      var mtl;
+      try {
+        mtl = new LuantiLauncher();
+      } catch (e) {
+        message("Cubewild could not start: " + e.message);
+        return;
+      }
+      mtl.onprogress = onProgress;
+      mtl.onerror = function (err) {
+        var text = String(err || "");
+        var friendly = /memory|RangeError|allocat/i.test(text)
+          ? "This device ran out of memory starting Cubewild. Close other tabs and try again."
+          : "Something went wrong starting Cubewild. Reload to try again.";
+        // The launcher may already have replaced the page, so draw over it.
+        if (!document.body.contains(scene)) document.body.appendChild(scene);
+        message(friendly, "Reload", selfUrl, false);
+        console.error("Cubewild:", text);
+      };
+      mtl.onexit = function () {
+        document.body.innerHTML = "";
+        document.body.appendChild(scene);
+        message("Your world is saved. See you next time.", "Play again", selfUrl, false);
+      };
+      mtl.oncancel = function () { location.reload(); };
+
+      // Single player needs no network. Point the multiplayer proxy at our own
+      // site (where it simply fails) so the game never contacts a third party.
+      mtl.setProxy((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/play/cubewild/no-proxy");
+
+      var lang = "en";
+      try { lang = getDefaultLanguage(); } catch (e) {}
+      mtl.setLang(lang);
+
+      // Lighter settings so it runs on school Chromebooks.
+      mtl.setConf("viewing_range", 80);
+      mtl.setConf("max_block_send_distance", 5);
+      mtl.setConf("max_block_generate_distance", 5);
+      mtl.setConf("fps_max", 60);
+      mtl.overrideConf("default_game", GAME);
+      mtl.overrideConf("menu_last_game", GAME);
+      mtl.overrideConf("creative_mode", mode === "creative" ? "true" : "false");
+      mtl.overrideConf("enable_damage", mode === "creative" ? "false" : "true");
+      mtl.overrideConf("doubletap_jump", mode === "creative" ? "true" : "false");
+      // Keys closer to what players expect: E for inventory, hold R to
+      // sprint. Ctrl is avoided because Ctrl+W closes the browser tab.
+      mtl.setConf("keymap_inventory", "SYSTEM_SCANCODE_8");
+      mtl.setConf("keymap_aux1", "SYSTEM_SCANCODE_21");
+
+      // Start fetching the game files now, alongside the engine.
+      mtl.setPacksDir(GAME_DIR, false);
+      mtl.addPack(GAME).catch(function () {});
+
+      mtl.onready = function () {
+        var args = new LuantiArgs();
+        args.gameid = GAME;
+        args.world = "/luanti/worlds/cubewild_" + mode;
+        args.go = true;
+        launched = true;
+        mtl.launch(args);
+      };
+    };
+    document.body.appendChild(script);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-mode]"), function (btn) {
+    btn.addEventListener("click", function () { start(btn.getAttribute("data-mode")); });
+  });
+})();
+</script>
+</body>
+</html>
