@@ -167,7 +167,7 @@
     <h1 class="cw-wordmark" style="font-size:40px">Cube<span>wild</span></h1>
     <p class="cw-progress-label" id="loadLabel">Getting your world ready</p>
     <div class="cw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="loadLabel" id="loadBarWrap"><div id="loadBar"></div></div>
-    <p class="cw-progress-detail" id="loadDetail">The first visit downloads about 40 MB. After that it starts much faster.</p>
+    <p class="cw-progress-detail" id="loadDetail">The first visit downloads about 40 MB. After that it starts in seconds.</p>
     <p class="cw-tip" id="loadTip"></p>
   </section>
 
@@ -203,11 +203,11 @@
 (function () {
   "use strict";
   var GAME = "mineclonia";
-  var RELEASE = "631c5b8acb9e";
+  var RELEASE = "2fdba505b113";
   // Game packs live in a folder named after their version, because the
   // launcher treats the pack URL as its version: a new folder makes every
   // browser fetch the update, an unchanged one keeps using its saved copy.
-  var GAME_DIR = "games/mineclonia-0.124.0";
+  var GAME_DIR = "games/mineclonia-0.124.0-2";
   // One saved world per mode, in the browser's private storage.
   var WORLDS = { survival: "Cubewild-Survival", creative: "Cubewild-Creative" };
   var TIPS = [

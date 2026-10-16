@@ -1,7 +1,7 @@
 'use strict';
 
 // These are relative paths
-const RELEASE_DIR = '631c5b8acb9e'; // set by build_www.sh
+const RELEASE_DIR = '2fdba505b113'; // set by build_www.sh
 const DEFAULT_PACKS_DIR = RELEASE_DIR + '/packs';
 
 // Wrap the constructor of Worker so that every worker thread
@@ -1581,10 +1581,9 @@ const busyCSS = `
 const busyHTML = `
   <div id="luanti_busy_panel" role="alertdialog" aria-modal="true"
        aria-labelledby="luanti_busy_title" aria-describedby="luanti_busy_text">
-    <h2 id="luanti_busy_title">Luanti is running in another window</h2>
-    <p id="luanti_busy_text">Only one window at a time can use the saved games
-      and settings stored in this browser. Close the other window, then try
-      again.</p>
+    <h2 id="luanti_busy_title">Cubewild is open in another tab</h2>
+    <p id="luanti_busy_text">Only one tab at a time can use your saved worlds.
+      Close the other Cubewild tab, then try again.</p>
     <div id="luanti_busy_buttons">
       <button id="luanti_busy_cancel" type="button">Cancel</button>
       <button id="luanti_busy_retry" type="button">Try Again</button>
