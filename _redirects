@@ -1,0 +1,9 @@
+# Cloudflare Pages redirects. One rule per line: <from> <to> <status>
+# Games removed from the catalogue, sent to their old category page so any
+# search ranking and links they still have pass on instead of hitting a 404.
+
+# Removed 28 Aug 2026; Google still crawling them in Oct 2026.
+/game/deepest-sword/ /games/action/ 301
+/game/deepest-sword /games/action/ 301
+/game/twerk-race-3d/ /games/action/ 301
+/game/twerk-race-3d /games/action/ 301
