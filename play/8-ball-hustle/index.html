@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="8 Ball Hustle: free 8 ball pool in your browser against opponents who get tougher as you win." />
+    <meta name="theme-color" content="#191515" />
+    <!-- online, the game is shown inside its page on Classroom Connect (classroom-connect.co.uk/game/8-ball-hustle/), which is the one to index -->
+    <meta name="robots" content="noindex" />
+    <title>8 Ball Hustle</title>
+    <style>
+      /*
+       * The loading screen. It's here rather than in src/styles.css so it shows the moment the page
+       * opens. It's laid out like the start screen (the same logo at the same size, with the bar in
+       * Play's place), so when it fades out the start screen is already there underneath.
+       */
+      #status {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        transition: opacity 340ms ease;
+      }
+      #status.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .load-card {
+        display: grid;
+        justify-items: center;
+        gap: clamp(6px, 2.2cqh, 22px);
+      }
+      .load-logo {
+        display: block;
+        width: clamp(220px, min(44cqw, 64cqh), 560px);
+        height: auto;
+        aspect-ratio: 760 / 558;
+        filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+        user-select: none;
+      }
+      /* the size of the Play button that takes its place */
+      .load-slot {
+        --bw: clamp(170px, min(25cqw, 34cqh), 300px);
+        width: var(--bw);
+        aspect-ratio: 538 / 147;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: calc(var(--bw) * 0.055);
+        text-align: center;
+      }
+      /* a thin gold-rimmed track (the info line's gold) filling with the buttons' teal glow */
+      .load-bar {
+        position: relative;
+        width: 92%;
+        height: max(8px, calc(var(--bw) * 0.042));
+        border-radius: 999px;
+        background: linear-gradient(#f7d77e, #b9781f 55%, #f3c757);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      }
+      .load-bar::before,
+      .load-fill {
+        position: absolute;
+        top: 1.5px;
+        bottom: 1.5px;
+        left: 1.5px;
+        border-radius: inherit;
+      }
+      .load-bar::before {
+        content: '';
+        right: 1.5px;
+        background: #0d0a0a;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+      }
+      .load-fill {
+        width: calc((100% - 3px) * var(--p, 0));
+        background: linear-gradient(90deg, rgba(40, 215, 195, 0.5), rgba(40, 215, 195, 0.95) 80%, #e2fffb);
+        box-shadow: 0 0 calc(var(--bw) * 0.035) rgba(40, 215, 195, 0.65);
+      }
+      .load-text {
+        font: 600 max(12px, calc(var(--bw) * 0.058)) / 1 'Barlow Condensed', 'Arial Narrow', sans-serif;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-variant-numeric: tabular-nums;
+        color: rgba(242, 232, 214, 0.75);
+      }
+      .load-error {
+        margin: 0;
+        max-width: 22em;
+        font: 500 15px / 1.35 Barlow, 'Segoe UI', sans-serif;
+        color: #f2e8d6;
+      }
+      .load-retry {
+        padding: 8px 22px;
+        border: 1.5px solid #d9a54a;
+        border-radius: 999px;
+        background: #1c1414;
+        color: #f7d77e;
+        font: 600 15px / 1 'Barlow Condensed', 'Arial Narrow', sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .load-retry:focus-visible {
+        outline: 2px solid #fff1c4;
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #status {
+          transition: none;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="./files/index-B4axwnAg.js"></script>
+    <link rel="stylesheet" crossorigin href="./files/index-CoK3LPQB.css">
+  </head>
+  <body>
+    <canvas id="table"></canvas>
+    <canvas id="cue-layer" aria-hidden="true"></canvas>
+    <div id="status">
+      <div class="load-card">
+        <img class="load-logo" src="./files/logo-glow-CnZNhM7U.webp" alt="8 Ball Hustle" draggable="false" fetchpriority="high" />
+        <div class="load-slot">
+          <div class="load-bar" role="progressbar" aria-label="Loading the game" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <i class="load-fill"></i>
+          </div>
+          <span class="load-text" aria-hidden="true">Loading</span>
+        </div>
+      </div>
+    </div>
+    <script>
+      // The loading screen's bar (src/ui/loading.ts drives it once the game's code has arrived).
+      (function () {
+        var root = document.documentElement;
+        // an upright phone shows the page turned on its side (src/ui/orientation.ts does this from now on)
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        root.style.setProperty('--real-w', w + 'px');
+        root.style.setProperty('--real-h', h + 'px');
+        if (window.matchMedia('(pointer: coarse)').matches && h > w) root.setAttribute('data-rotated', '');
+
+        var el = document.getElementById('status');
+        var slot = el.querySelector('.load-slot');
+        var bar = el.querySelector('.load-bar');
+        var text = el.querySelector('.load-text');
+        var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var start = performance.now();
+        // until the game reports in, the bar creeps towards CODE_SHARE while its code downloads
+        var CODE_SHARE = 0.12;
+        var target = 0;
+        var shown = 0;
+        var heard = false;
+        var raf = 0;
+        var onFull = null;
+
+        function frame(now) {
+          if (!heard) target = CODE_SHARE * (1 - Math.exp(-(now - start) / 900));
+          shown += (target - shown) * (still ? 1 : 0.16);
+          if (target - shown < 0.002) shown = target;
+          var pct = Math.round(shown * 100);
+          el.style.setProperty('--p', shown.toFixed(4));
+          bar.setAttribute('aria-valuenow', String(pct));
+          text.textContent = 'Loading ' + pct + '%';
+          if (onFull && shown >= 0.999) {
+            var done = onFull;
+            onFull = null;
+            done();
+            return;
+          }
+          raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        window.__loading = {
+          progress: function (f) {
+            heard = true;
+            target = Math.max(target, CODE_SHARE + (1 - CODE_SHARE) * Math.min(1, f));
+          },
+          finish: function () {
+            heard = true;
+            target = 1;
+            return new Promise(function (resolve) {
+              onFull = function () {
+                el.classList.add('done');
+                setTimeout(function () {
+                  el.remove();
+                  resolve();
+                }, still ? 0 : 360);
+              };
+            });
+          },
+          fail: function (message) {
+            cancelAnimationFrame(raf);
+            var p = document.createElement('p');
+            p.className = 'load-error';
+            p.setAttribute('role', 'alert');
+            p.textContent = message;
+            var again = document.createElement('button');
+            again.className = 'load-retry';
+            again.type = 'button';
+            again.textContent = 'Try again';
+            again.onclick = function () {
+              location.reload();
+            };
+            slot.style.aspectRatio = 'auto';
+            slot.style.width = 'auto';
+            slot.replaceChildren(p, again);
+          },
+        };
+      })();
+    </script>
+  </body>
+</html>
