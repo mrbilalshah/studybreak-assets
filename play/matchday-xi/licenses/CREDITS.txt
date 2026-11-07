@@ -1,0 +1,26 @@
+Matchday XI - credits and licences
+==================================
+
+Matchday XI was written for Classroom Connect (https://classroom-connect.co.uk).
+Club names, crests, kits and player names are made up for the game.
+
+Third-party parts
+-----------------
+- three.js r170 (graphics library). MIT licence: THREE-LICENSE.txt.
+  https://github.com/mrdoob/three.js
+- Barlow Semi Condensed (lettering). SIL Open Font License 1.1: BARLOW-OFL.txt.
+  https://github.com/jpt/barlow
+- Player body: built from the MakeHuman base mesh and targets, CC0 (public domain).
+  https://github.com/makehumancommunity
+- Player animation clips: from Google Research Football's game engine data,
+  released into the public domain (Unlicense).
+  https://github.com/google-research/football
+- Crowd recordings from Freesound, all CC0 (public domain):
+  - Crowd loop: "Feyenoord crowd, De Kuip" by huubjeroen
+    https://freesound.org/people/huubjeroen/sounds/39733/
+  - Goal, chance and foul reactions: RB Leipzig v Magdeburg by blaukreuz
+    https://freesound.org/people/blaukreuz/sounds/189821/
+    https://freesound.org/people/blaukreuz/sounds/189823/
+    https://freesound.org/people/blaukreuz/sounds/189822/
+  - Kick-off cheer: "Crowd Cheer" by FoolBoyMedia
+    https://freesound.org/people/FoolBoyMedia/sounds/397434/
