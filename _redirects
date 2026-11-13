@@ -7,3 +7,9 @@
 /game/deepest-sword /games/action/ 301
 /game/twerk-race-3d/ /games/action/ 301
 /game/twerk-race-3d /games/action/ 301
+
+# Downhill Daily (a Classroom Connect original) removed 13 Nov 2026.
+/game/downhill-daily/ /games/racing/ 301
+/game/downhill-daily /games/racing/ 301
+/play/downhill-daily /games/racing/ 301
+/play/downhill-daily/* /games/racing/ 301
